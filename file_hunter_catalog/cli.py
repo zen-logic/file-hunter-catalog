@@ -20,7 +20,7 @@ def cmd_catalog(argv):
     parser.add_argument("--resume", action="store_true", help="Resume an interrupted catalog")
     args = parser.parse_args(argv)
 
-    root_path = os.path.abspath(args.path)
+    root_path = os.path.abspath(os.path.expanduser(args.path))
     if not os.path.isdir(root_path):
         print(f"Error: {root_path} is not a directory", file=sys.stderr)
         sys.exit(1)
