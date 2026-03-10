@@ -78,13 +78,53 @@ def cmd_import(args):
         print(f"Error: {args.db} not found", file=sys.stderr)
         sys.exit(1)
 
+    # Read root_path from catalog unless overridden
+    import sqlite3
+
+    cat = sqlite3.connect(args.catalog)
+    cat.row_factory = sqlite3.Row
+    row = cat.execute(
+        "SELECT value FROM catalog_meta WHERE key = 'root_path'"
+    ).fetchone()
+    cat.close()
+
+    if not row:
+        print("Error: catalog has no root_path in metadata", file=sys.stderr)
+        sys.exit(1)
+
+    root_path = args.root_path or row["value"]
+
+    # Resolve agent name to ID
+    srv = sqlite3.connect(args.db)
+    srv.row_factory = sqlite3.Row
+    agent_row = srv.execute(
+        "SELECT id, name FROM agents WHERE name = ?", (args.agent,)
+    ).fetchone()
+
+    if not agent_row:
+        # List available agents to help the user
+        agents = srv.execute("SELECT id, name FROM agents ORDER BY id").fetchall()
+        srv.close()
+        print(f"Error: no agent named '{args.agent}'", file=sys.stderr)
+        if agents:
+            print("Available agents:", file=sys.stderr)
+            for a in agents:
+                print(f"  {a['name']}", file=sys.stderr)
+        sys.exit(1)
+
+    agent_id = agent_row["id"]
+    srv.close()
+
+    if args.root_path:
+        print(f"Root path override: {root_path}")
+
     from file_hunter_catalog.importer import import_catalog
 
     import_catalog(
         catalog_path=args.catalog,
         server_db_path=args.db,
-        agent_id=args.agent_id,
-        root_path=args.root_path,
+        agent_id=agent_id,
+        root_path=root_path,
         location_name=args.location_name,
     )
 
@@ -107,9 +147,9 @@ def main():
     p_import = sub.add_parser("import", help="Import a catalog into a File Hunter database")
     p_import.add_argument("catalog", help="Catalog SQLite file to import")
     p_import.add_argument("--db", required=True, help="Path to File Hunter server database")
-    p_import.add_argument("--agent-id", type=int, required=True, help="Agent ID that manages the location")
-    p_import.add_argument("--root-path", required=True, help="Root path of the location on the agent machine")
-    p_import.add_argument("--location-name", help="Name for a new location (omit to match existing)")
+    p_import.add_argument("--agent", required=True, help="Name of the agent that manages the files")
+    p_import.add_argument("--root-path", help="Override the root path (default: from catalog)")
+    p_import.add_argument("--location-name", help="Name for a new location (default: directory name)")
 
     args = parser.parse_args()
     if args.command == "catalog":
