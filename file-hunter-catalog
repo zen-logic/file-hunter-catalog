@@ -1,0 +1,6 @@
+#!/usr/bin/env python3
+"""File Hunter Catalog — offline file cataloger and import tool."""
+
+from file_hunter_catalog.cli import main
+
+main()
