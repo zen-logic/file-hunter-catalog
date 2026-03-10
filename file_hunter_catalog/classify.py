@@ -117,3 +117,15 @@ except ImportError:
         if size_bytes < 1125899906842624:
             return f"{size_bytes / 1099511627776:.1f} TB"
         return f"{size_bytes / 1125899906842624:.1f} PB"
+
+
+def format_elapsed(seconds: float) -> str:
+    """Format seconds as human-readable elapsed time."""
+    s = int(seconds)
+    if s < 60:
+        return f"{s}s"
+    if s < 3600:
+        return f"{s // 60}m {s % 60}s"
+    h = s // 3600
+    m = (s % 3600) // 60
+    return f"{h}h {m}m"

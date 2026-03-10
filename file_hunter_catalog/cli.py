@@ -5,7 +5,7 @@ import os
 import sys
 import time
 
-from file_hunter_catalog.classify import format_size
+from file_hunter_catalog.classify import format_elapsed, format_size
 
 
 def cmd_catalog(argv):
@@ -71,7 +71,7 @@ def cmd_catalog(argv):
 
     db_size = os.path.getsize(output)
 
-    print(f"Complete in {elapsed:.1f}s")
+    print(f"Complete in {format_elapsed(elapsed)}")
     print(f"  Files:   {files:,}")
     print(f"  Folders: {folders:,}")
     print(f"  Size:    {format_size(total_bytes)}")

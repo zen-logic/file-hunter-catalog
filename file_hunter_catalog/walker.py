@@ -7,7 +7,7 @@ from collections import deque
 from datetime import datetime, timezone
 
 from file_hunter_catalog.catalog_db import CatalogDB
-from file_hunter_catalog.classify import classify_file, format_size
+from file_hunter_catalog.classify import classify_file, format_elapsed, format_size
 from file_hunter_catalog.hasher import hash_file_partial_sync
 
 BATCH_SIZE = 5000
@@ -149,7 +149,7 @@ def walk_and_catalog(
                 f"\r  {files_cataloged:,} files | "
                 f"{format_size(total_bytes)} | "
                 f"{rate:.0f} files/sec | "
-                f"{elapsed:.0f}s elapsed",
+                f"{format_elapsed(elapsed)}",
                 end="", flush=True,
             )
             last_report = now
