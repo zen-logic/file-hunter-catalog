@@ -1,0 +1,9 @@
+[project]
+name = "file-hunter-catalog"
+version = "0.1.0"
+description = "Offline file cataloger and import tool for File Hunter"
+requires-python = ">=3.11"
+dependencies = ["xxhash>=3.0"]
+
+[project.scripts]
+file-hunter-catalog = "file_hunter_catalog.__main__:main"
