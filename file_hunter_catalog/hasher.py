@@ -9,13 +9,34 @@ import os
 CHUNK_SIZE = 1024 * 1024  # 1 MB
 PARTIAL_SIZE = 4 * 1024 * 1024  # 4 MB
 
-try:
-    from file_hunter_core.hasher import hash_file_partial_sync
-except ImportError:
-    import xxhash
+_impl = None
 
-    def hash_file_partial_sync(path: str) -> str:
-        """xxHash64 of first 4MB + last 4MB. For files <= 8MB, reads everything."""
+
+def hash_file_partial_sync(path: str) -> str:
+    """xxHash64 of first 4MB + last 4MB. For files <= 8MB, reads everything."""
+    global _impl
+    if _impl is None:
+        _impl = _load_impl()
+    return _impl(path)
+
+
+def _load_impl():
+    try:
+        from file_hunter_core.hasher import hash_file_partial_sync as fn
+        return fn
+    except ImportError:
+        pass
+
+    try:
+        import xxhash
+    except ImportError:
+        print(
+            "Error: xxhash is required. Install it with: pip install xxhash",
+            file=__import__("sys").stderr,
+        )
+        raise SystemExit(1)
+
+    def _hash(path: str) -> str:
         xx = xxhash.xxh64()
         file_size = os.path.getsize(path)
         with open(path, "rb") as f:
@@ -34,3 +55,5 @@ except ImportError:
                 while chunk := f.read(CHUNK_SIZE):
                     xx.update(chunk)
         return xx.hexdigest()
+
+    return _hash

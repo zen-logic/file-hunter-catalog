@@ -5,9 +5,7 @@ import os
 import sys
 import time
 
-from file_hunter_catalog.catalog_db import CatalogDB
 from file_hunter_catalog.classify import format_size
-from file_hunter_catalog.walker import walk_and_catalog
 
 
 def cmd_catalog(argv):
@@ -41,6 +39,9 @@ def cmd_catalog(argv):
     if resume:
         print("Mode:       resume")
     print()
+
+    from file_hunter_catalog.catalog_db import CatalogDB
+    from file_hunter_catalog.walker import walk_and_catalog
 
     db = CatalogDB(output)
     db.open(resume=resume)
