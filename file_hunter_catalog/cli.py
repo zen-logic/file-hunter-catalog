@@ -10,7 +10,7 @@ from file_hunter_catalog.classify import format_size
 from file_hunter_catalog.walker import walk_and_catalog
 
 
-def cmd_scan(args):
+def cmd_catalog(args):
     """Catalog a directory tree into a SQLite database."""
     root_path = os.path.abspath(args.path)
     if not os.path.isdir(root_path):
@@ -96,12 +96,12 @@ def main():
     )
     sub = parser.add_subparsers(dest="command", required=True)
 
-    # scan
-    p_scan = sub.add_parser("scan", help="Catalog a directory tree")
-    p_scan.add_argument("path", help="Directory to catalog")
-    p_scan.add_argument("-o", "--output", help="Output SQLite file (default: catalog-<timestamp>.db)")
-    p_scan.add_argument("--no-hash", action="store_true", help="Skip hash computation (metadata only)")
-    p_scan.add_argument("--resume", action="store_true", help="Resume an interrupted catalog")
+    # catalog
+    p_cat = sub.add_parser("catalog", help="Catalog a directory tree")
+    p_cat.add_argument("path", help="Directory to catalog")
+    p_cat.add_argument("-o", "--output", help="Output SQLite file (default: catalog-<timestamp>.db)")
+    p_cat.add_argument("--no-hash", action="store_true", help="Skip hash computation (metadata only)")
+    p_cat.add_argument("--resume", action="store_true", help="Resume an interrupted catalog")
 
     # import
     p_import = sub.add_parser("import", help="Import a catalog into a File Hunter database")
@@ -112,7 +112,7 @@ def main():
     p_import.add_argument("--location-name", help="Name for a new location (omit to match existing)")
 
     args = parser.parse_args()
-    if args.command == "scan":
-        cmd_scan(args)
+    if args.command == "catalog":
+        cmd_catalog(args)
     elif args.command == "import":
         cmd_import(args)
