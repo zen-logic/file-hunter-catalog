@@ -116,7 +116,7 @@ def walk_and_catalog(
             if not no_hash and st.st_size > 0 and not hidden:
                 if st.st_size >= LARGE_FILE_THRESHOLD:
                     print(
-                        f"\r  hashing {format_size(st.st_size)} file: {name}",
+                        f"\r  hashing {format_size(st.st_size)} file: {name}\033[K",
                         end="", flush=True,
                     )
                 try:
@@ -155,7 +155,7 @@ def walk_and_catalog(
                 f"\r  {files_cataloged:,} files | "
                 f"{format_size(total_bytes)} | "
                 f"{rate:.0f} files/sec | "
-                f"{format_elapsed(elapsed)}",
+                f"{format_elapsed(elapsed)}\033[K",
                 end="", flush=True,
             )
             last_report = now
