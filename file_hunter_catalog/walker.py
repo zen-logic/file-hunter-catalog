@@ -12,6 +12,7 @@ from file_hunter_catalog.hasher import hash_file_partial_sync
 
 BATCH_SIZE = 5000
 TRAVERSAL_SAVE_INTERVAL = 30  # seconds
+LARGE_FILE_THRESHOLD = 100 * 1024 * 1024  # 100 MB
 
 
 def walk_and_catalog(
@@ -113,6 +114,11 @@ def walk_and_catalog(
             # Hash
             hash_fast = None
             if not no_hash and st.st_size > 0 and not hidden:
+                if st.st_size >= LARGE_FILE_THRESHOLD:
+                    print(
+                        f"\r  hashing {format_size(st.st_size)} file: {name}",
+                        end="", flush=True,
+                    )
                 try:
                     hash_fast = hash_file_partial_sync(full_path)
                 except OSError:
