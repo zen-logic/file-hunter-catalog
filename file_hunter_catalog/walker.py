@@ -146,24 +146,24 @@ def walk_and_catalog(
                 db.insert_files_batch(batch)
                 batch.clear()
 
-        # Progress reporting
-        now = time.monotonic()
-        if now - last_report >= 2:
-            elapsed = now - t0
-            rate = files_cataloged / elapsed if elapsed > 0 else 0
-            print(
-                f"\r  {files_cataloged:,} files | "
-                f"{format_size(total_bytes)} | "
-                f"{rate:.0f} files/sec | "
-                f"{format_elapsed(elapsed)}\033[K",
-                end="", flush=True,
-            )
-            last_report = now
+            # Progress reporting
+            now = time.monotonic()
+            if now - last_report >= 2:
+                elapsed = now - t0
+                rate = files_cataloged / elapsed if elapsed > 0 else 0
+                print(
+                    f"\r  {files_cataloged:,} files | "
+                    f"{format_size(total_bytes)} | "
+                    f"{rate:.0f} files/sec | "
+                    f"{format_elapsed(elapsed)}\033[K",
+                    end="", flush=True,
+                )
+                last_report = now
 
-        # Save traversal state periodically
-        if now - last_save >= TRAVERSAL_SAVE_INTERVAL:
-            db.save_traversal_state(list(dirs_to_visit))
-            last_save = now
+                # Save traversal state periodically
+                if now - last_save >= TRAVERSAL_SAVE_INTERVAL:
+                    db.save_traversal_state(list(dirs_to_visit))
+                    last_save = now
 
     # Flush remaining
     if batch:
