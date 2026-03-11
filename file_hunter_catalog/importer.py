@@ -111,7 +111,7 @@ def import_catalog(
     while True:
         rows = cat.execute(
             "SELECT folder_id, filename, rel_path, file_size, "
-            "file_type_high, file_type_low, hash_fast, "
+            "file_type_high, file_type_low, hash_partial, hash_fast, hash_strong, "
             "created_date, modified_date, hidden "
             "FROM files LIMIT ? OFFSET ?",
             (BATCH_SIZE, offset),
@@ -135,8 +135,9 @@ def import_catalog(
                 r["file_type_high"],
                 r["file_type_low"],
                 r["file_size"],
+                r["hash_partial"],
                 r["hash_fast"],
-                None,  # hash_strong — computed later by backfill
+                r["hash_strong"],
                 "",    # description
                 "",    # tags
                 r["created_date"],
@@ -149,10 +150,11 @@ def import_catalog(
         srv.executemany(
             "INSERT OR IGNORE INTO files "
             "(filename, full_path, rel_path, location_id, folder_id, "
-            "file_type_high, file_type_low, file_size, hash_fast, hash_strong, "
+            "file_type_high, file_type_low, file_size, "
+            "hash_partial, hash_fast, hash_strong, "
             "description, tags, created_date, modified_date, "
             "date_cataloged, date_last_seen, hidden) "
-            "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+            "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
             batch,
         )
         srv.commit()

@@ -8,7 +8,7 @@ from datetime import datetime, timezone
 
 from file_hunter_catalog.catalog_db import CatalogDB
 from file_hunter_catalog.classify import classify_file, format_elapsed, format_size
-from file_hunter_catalog.hasher import hash_file_partial_sync
+from file_hunter_catalog.hasher import hash_file_partial_sync, hash_file_sync
 
 BATCH_SIZE = 5000
 TRAVERSAL_SAVE_INTERVAL = 30  # seconds
@@ -111,8 +111,10 @@ def walk_and_catalog(
             rel_path = os.path.join(rel_dir, name) if rel_dir else name
             type_high, type_low = classify_file(name)
 
-            # Hash
+            # Hash — compute all three in one pass where possible
+            hash_partial = None
             hash_fast = None
+            hash_strong = None
             if not no_hash and st.st_size > 0 and not hidden:
                 if st.st_size >= LARGE_FILE_THRESHOLD:
                     print(
@@ -120,7 +122,8 @@ def walk_and_catalog(
                         end="", flush=True,
                     )
                 try:
-                    hash_fast = hash_file_partial_sync(full_path)
+                    hash_partial = hash_file_partial_sync(full_path)
+                    hash_fast, hash_strong = hash_file_sync(full_path)
                 except OSError:
                     files_skipped += 1
                     continue
@@ -135,7 +138,7 @@ def walk_and_catalog(
 
             batch.append((
                 folder_id, name, rel_path, st.st_size,
-                type_high, type_low, hash_fast,
+                type_high, type_low, hash_partial, hash_fast, hash_strong,
                 created, modified, hidden,
             ))
             files_cataloged += 1

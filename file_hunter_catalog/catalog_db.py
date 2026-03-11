@@ -30,7 +30,9 @@ CREATE TABLE IF NOT EXISTS files (
     file_size INTEGER NOT NULL,
     file_type_high TEXT,
     file_type_low TEXT,
+    hash_partial TEXT,
     hash_fast TEXT,
+    hash_strong TEXT,
     created_date TEXT,
     modified_date TEXT,
     hidden INTEGER NOT NULL DEFAULT 0
@@ -133,13 +135,15 @@ class CatalogDB:
     def insert_files_batch(self, files: list[tuple]):
         """Bulk insert files. Each tuple:
         (folder_id, filename, rel_path, file_size, file_type_high,
-         file_type_low, hash_fast, created_date, modified_date, hidden)
+         file_type_low, hash_partial, hash_fast, hash_strong,
+         created_date, modified_date, hidden)
         """
         self.conn.executemany(
             "INSERT OR IGNORE INTO files "
             "(folder_id, filename, rel_path, file_size, file_type_high, "
-            "file_type_low, hash_fast, created_date, modified_date, hidden) "
-            "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+            "file_type_low, hash_partial, hash_fast, hash_strong, "
+            "created_date, modified_date, hidden) "
+            "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
             files,
         )
         self.conn.commit()
