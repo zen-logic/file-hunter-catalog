@@ -61,7 +61,9 @@ def walk_and_catalog(
             continue
 
         # Determine hidden status from path
-        parent_hidden = any(p.startswith(".") for p in rel_dir.split(os.sep)) if rel_dir else False
+        parent_hidden = (
+            any(p.startswith(".") for p in rel_dir.split(os.sep)) if rel_dir else False
+        )
 
         # Create folder record (except for root)
         if rel_dir:
@@ -119,7 +121,8 @@ def walk_and_catalog(
                 if st.st_size >= LARGE_FILE_THRESHOLD:
                     print(
                         f"\r  hashing {format_size(st.st_size)} file: {name}\033[K",
-                        end="", flush=True,
+                        end="",
+                        flush=True,
                     )
                 try:
                     hash_partial = hash_file_partial_sync(full_path)
@@ -133,14 +136,26 @@ def walk_and_catalog(
                 tz=timezone.utc,
             ).isoformat(timespec="seconds")
             modified = datetime.fromtimestamp(
-                st.st_mtime, tz=timezone.utc,
+                st.st_mtime,
+                tz=timezone.utc,
             ).isoformat(timespec="seconds")
 
-            batch.append((
-                folder_id, name, rel_path, st.st_size,
-                type_high, type_low, hash_partial, hash_fast, hash_strong,
-                created, modified, hidden,
-            ))
+            batch.append(
+                (
+                    folder_id,
+                    name,
+                    rel_path,
+                    st.st_size,
+                    type_high,
+                    type_low,
+                    hash_partial,
+                    hash_fast,
+                    hash_strong,
+                    created,
+                    modified,
+                    hidden,
+                )
+            )
             files_cataloged += 1
             total_bytes += st.st_size
 
@@ -159,7 +174,8 @@ def walk_and_catalog(
                     f"{format_size(total_bytes)} | "
                     f"{rate:.0f} files/sec | "
                     f"{format_elapsed(elapsed)}\033[K",
-                    end="", flush=True,
+                    end="",
+                    flush=True,
                 )
                 last_report = now
 

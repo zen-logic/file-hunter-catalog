@@ -15,9 +15,15 @@ def cmd_catalog(argv):
         description="Catalog a directory tree into a portable SQLite database",
     )
     parser.add_argument("path", help="Directory to catalog")
-    parser.add_argument("-o", "--output", help="Output SQLite file (default: catalog-<timestamp>.db)")
-    parser.add_argument("--no-hash", action="store_true", help="Skip hash computation (metadata only)")
-    parser.add_argument("--resume", action="store_true", help="Resume an interrupted catalog")
+    parser.add_argument(
+        "-o", "--output", help="Output SQLite file (default: catalog-<timestamp>.db)"
+    )
+    parser.add_argument(
+        "--no-hash", action="store_true", help="Skip hash computation (metadata only)"
+    )
+    parser.add_argument(
+        "--resume", action="store_true", help="Resume an interrupted catalog"
+    )
     args = parser.parse_args(argv)
 
     root_path = os.path.abspath(os.path.expanduser(args.path))
@@ -61,7 +67,10 @@ def cmd_catalog(argv):
 
     t0 = time.monotonic()
     files, skipped, total_bytes = walk_and_catalog(
-        root_path, db, no_hash=args.no_hash, resume=resume,
+        root_path,
+        db,
+        no_hash=args.no_hash,
+        resume=resume,
     )
     elapsed = time.monotonic() - t0
 
@@ -87,10 +96,18 @@ def cmd_import(argv):
         description="Import a catalog into a File Hunter server database",
     )
     parser.add_argument("catalog", help="Catalog SQLite file to import")
-    parser.add_argument("--db", required=True, help="Path to File Hunter server database")
-    parser.add_argument("--agent", required=True, help="Name of the agent that manages the files")
-    parser.add_argument("--root-path", help="Override the root path (default: from catalog)")
-    parser.add_argument("--location-name", help="Name for a new location (default: directory name)")
+    parser.add_argument(
+        "--db", required=True, help="Path to File Hunter server database"
+    )
+    parser.add_argument(
+        "--agent", required=True, help="Name of the agent that manages the files"
+    )
+    parser.add_argument(
+        "--root-path", help="Override the root path (default: from catalog)"
+    )
+    parser.add_argument(
+        "--location-name", help="Name for a new location (default: directory name)"
+    )
     args = parser.parse_args(argv)
 
     if not os.path.exists(args.catalog):
@@ -153,10 +170,14 @@ def main():
         cmd_import(sys.argv[2:])
     elif len(sys.argv) > 1 and sys.argv[1] in ("-h", "--help"):
         print("usage: file-hunter-catalog <path> [-o OUTPUT] [--no-hash] [--resume]")
-        print("       file-hunter-catalog import <catalog.db> --db <server.db> --agent <name>")
+        print(
+            "       file-hunter-catalog import <catalog.db> --db <server.db> --agent <name>"
+        )
         print()
         print("Offline file cataloger and import tool for File Hunter.")
         print()
-        print("Run 'file-hunter-catalog <path> --help' or 'file-hunter-catalog import --help' for details.")
+        print(
+            "Run 'file-hunter-catalog <path> --help' or 'file-hunter-catalog import --help' for details."
+        )
     else:
         cmd_catalog(sys.argv[1:])

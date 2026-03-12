@@ -5,7 +5,6 @@ import os
 import sqlite3
 import time
 
-from file_hunter_catalog.classify import format_size
 
 BATCH_SIZE = 5000
 
@@ -105,7 +104,6 @@ def import_catalog(
     print(f"Importing {total_files:,} files...")
 
     files_imported = 0
-    files_skipped = 0
     offset = 0
 
     while True:
@@ -126,26 +124,28 @@ def import_catalog(
             server_folder_id = folder_map.get(cat_folder_id) if cat_folder_id else None
             full_path = os.path.join(root_path, r["rel_path"])
 
-            batch.append((
-                r["filename"],
-                full_path,
-                r["rel_path"],
-                location_id,
-                server_folder_id,
-                r["file_type_high"],
-                r["file_type_low"],
-                r["file_size"],
-                r["hash_partial"],
-                r["hash_fast"],
-                r["hash_strong"],
-                "",    # description
-                "",    # tags
-                r["created_date"],
-                r["modified_date"],
-                now,   # date_cataloged
-                now,   # date_last_seen
-                r["hidden"],
-            ))
+            batch.append(
+                (
+                    r["filename"],
+                    full_path,
+                    r["rel_path"],
+                    location_id,
+                    server_folder_id,
+                    r["file_type_high"],
+                    r["file_type_low"],
+                    r["file_size"],
+                    r["hash_partial"],
+                    r["hash_fast"],
+                    r["hash_strong"],
+                    "",  # description
+                    "",  # tags
+                    r["created_date"],
+                    r["modified_date"],
+                    now,  # date_cataloged
+                    now,  # date_last_seen
+                    r["hidden"],
+                )
+            )
 
         srv.executemany(
             "INSERT OR IGNORE INTO files "
@@ -165,9 +165,9 @@ def import_catalog(
         elapsed = time.monotonic() - t0
         rate = files_imported / elapsed if elapsed > 0 else 0
         print(
-            f"\r  {files_imported:,}/{total_files:,} files | "
-            f"{rate:.0f} files/sec",
-            end="", flush=True,
+            f"\r  {files_imported:,}/{total_files:,} files | {rate:.0f} files/sec",
+            end="",
+            flush=True,
         )
 
     print()
@@ -357,6 +357,12 @@ def _recalculate_location_sizes(srv: sqlite3.Connection, location_id: int):
     srv.execute(
         "UPDATE locations SET total_size = ?, file_count = ?, "
         "type_counts = ?, duplicate_count = ? WHERE id = ?",
-        (loc_total_size, loc_total_count, json.dumps(loc_types), loc_dup_count, location_id),
+        (
+            loc_total_size,
+            loc_total_count,
+            json.dumps(loc_types),
+            loc_dup_count,
+            location_id,
+        ),
     )
     srv.commit()

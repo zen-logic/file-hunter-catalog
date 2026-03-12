@@ -7,14 +7,14 @@ If file_hunter_core is installed, uses it directly.
 import os
 
 CHUNK_SIZE = 1024 * 1024  # 1 MB
-PARTIAL_SIZE = 4 * 1024 * 1024  # 4 MB
+PARTIAL_SIZE = 64 * 1024  # 64 KB
 
 _impl_partial = None
 _impl_full = None
 
 
 def hash_file_partial_sync(path: str) -> str:
-    """xxHash64 of first 4MB + last 4MB. For files <= 8MB, reads everything."""
+    """xxHash64 of first 64KB + last 64KB. For files <= 128KB, reads everything."""
     global _impl_partial
     if _impl_partial is None:
         _impl_partial = _load_partial_impl()
@@ -32,6 +32,7 @@ def hash_file_sync(path: str) -> tuple[str, str]:
 def _load_partial_impl():
     try:
         from file_hunter_core.hasher import hash_file_partial_sync as fn
+
         return fn
     except ImportError:
         pass
@@ -71,6 +72,7 @@ def _load_partial_impl():
 def _load_full_impl():
     try:
         from file_hunter_core.hasher import hash_file_sync as fn
+
         return fn
     except ImportError:
         pass
