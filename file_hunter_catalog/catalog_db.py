@@ -31,8 +31,6 @@ CREATE TABLE IF NOT EXISTS files (
     file_type_high TEXT,
     file_type_low TEXT,
     hash_partial TEXT,
-    hash_fast TEXT,
-    hash_strong TEXT,
     created_date TEXT,
     modified_date TEXT,
     hidden INTEGER NOT NULL DEFAULT 0
@@ -124,26 +122,35 @@ class CatalogDB:
         parent_path = "/".join(rel_path.split("/")[:-1]) if "/" in rel_path else ""
         parent_id = self._folder_cache.get(parent_path) if parent_path else None
 
-        cursor = self.conn.execute(
-            "INSERT INTO folders (parent_id, name, rel_path, hidden) VALUES (?, ?, ?, ?)",
+        self.conn.execute(
+            "INSERT OR IGNORE INTO folders (parent_id, name, rel_path, hidden) "
+            "VALUES (?, ?, ?, ?)",
             (parent_id, name, rel_path, 1 if hidden else 0),
         )
-        folder_id = cursor.lastrowid
+        row = self.conn.execute(
+            "SELECT id FROM folders WHERE rel_path = ?", (rel_path,)
+        ).fetchone()
+        folder_id = row["id"]
         self._folder_cache[rel_path] = folder_id
         return folder_id
 
     def insert_files_batch(self, files: list[tuple]):
-        """Bulk insert files. Each tuple:
+        """Bulk insert or update files. Each tuple:
         (folder_id, filename, rel_path, file_size, file_type_high,
-         file_type_low, hash_partial, hash_fast, hash_strong,
-         created_date, modified_date, hidden)
+         file_type_low, hash_partial, created_date, modified_date, hidden)
         """
         self.conn.executemany(
-            "INSERT OR IGNORE INTO files "
+            "INSERT INTO files "
             "(folder_id, filename, rel_path, file_size, file_type_high, "
-            "file_type_low, hash_partial, hash_fast, hash_strong, "
+            "file_type_low, hash_partial, "
             "created_date, modified_date, hidden) "
-            "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+            "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?) "
+            "ON CONFLICT(rel_path) DO UPDATE SET "
+            "folder_id=excluded.folder_id, filename=excluded.filename, "
+            "file_size=excluded.file_size, file_type_high=excluded.file_type_high, "
+            "file_type_low=excluded.file_type_low, hash_partial=excluded.hash_partial, "
+            "created_date=excluded.created_date, modified_date=excluded.modified_date, "
+            "hidden=excluded.hidden",
             files,
         )
         self.conn.commit()
