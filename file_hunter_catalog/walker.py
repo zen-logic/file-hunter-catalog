@@ -133,7 +133,7 @@ def walk_and_catalog(
                     created,
                     modified,
                     hidden,
-                    st.st_ino,
+                    st.st_ino & 0x7FFFFFFFFFFFFFFF,
                 )
             )
             files_cataloged += 1
