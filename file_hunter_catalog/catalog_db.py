@@ -33,7 +33,8 @@ CREATE TABLE IF NOT EXISTS files (
     hash_partial TEXT,
     created_date TEXT,
     modified_date TEXT,
-    hidden INTEGER NOT NULL DEFAULT 0
+    hidden INTEGER NOT NULL DEFAULT 0,
+    inode INTEGER
 );
 
 CREATE INDEX IF NOT EXISTS idx_cat_files_folder ON files(folder_id);
@@ -58,6 +59,13 @@ class CatalogDB:
             if s:
                 self.conn.execute(s)
         self.conn.commit()
+
+        # Migration: add inode column for existing databases
+        try:
+            self.conn.execute("ALTER TABLE files ADD COLUMN inode INTEGER")
+            self.conn.commit()
+        except sqlite3.OperationalError:
+            pass  # Column already exists
 
         if resume:
             # Rebuild folder cache from existing data
@@ -137,21 +145,38 @@ class CatalogDB:
     def insert_files_batch(self, files: list[tuple]):
         """Bulk insert or update files. Each tuple:
         (folder_id, filename, rel_path, file_size, file_type_high,
-         file_type_low, hash_partial, created_date, modified_date, hidden)
+         file_type_low, hash_partial, created_date, modified_date, hidden, inode)
         """
         self.conn.executemany(
             "INSERT INTO files "
             "(folder_id, filename, rel_path, file_size, file_type_high, "
             "file_type_low, hash_partial, "
-            "created_date, modified_date, hidden) "
-            "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?) "
+            "created_date, modified_date, hidden, inode) "
+            "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) "
             "ON CONFLICT(rel_path) DO UPDATE SET "
             "folder_id=excluded.folder_id, filename=excluded.filename, "
             "file_size=excluded.file_size, file_type_high=excluded.file_type_high, "
             "file_type_low=excluded.file_type_low, hash_partial=excluded.hash_partial, "
             "created_date=excluded.created_date, modified_date=excluded.modified_date, "
-            "hidden=excluded.hidden",
+            "hidden=excluded.hidden, inode=excluded.inode",
             files,
+        )
+        self.conn.commit()
+
+    def get_unhashed_files(self) -> list[tuple]:
+        """Return (id, rel_path) for files needing hashing, sorted by inode."""
+        rows = self.conn.execute(
+            "SELECT id, rel_path FROM files "
+            "WHERE hash_partial IS NULL AND file_size > 0 "
+            "ORDER BY inode"
+        ).fetchall()
+        return [(r["id"], r["rel_path"]) for r in rows]
+
+    def update_hashes_batch(self, updates: list[tuple]):
+        """Batch update hash_partial. Each tuple: (hash_partial, id)."""
+        self.conn.executemany(
+            "UPDATE files SET hash_partial = ? WHERE id = ?",
+            updates,
         )
         self.conn.commit()
 

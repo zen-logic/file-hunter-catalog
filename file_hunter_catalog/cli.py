@@ -50,7 +50,7 @@ def main():
     print()
 
     from file_hunter_catalog.catalog_db import CatalogDB
-    from file_hunter_catalog.walker import walk_and_catalog
+    from file_hunter_catalog.walker import walk_and_catalog, hash_catalog_files
 
     db = CatalogDB(output)
     db.open(resume=resume or updating)
@@ -68,12 +68,20 @@ def main():
     db.write_initial_meta(root_path)
 
     t0 = time.monotonic()
+
+    print("Pass 1: metadata")
     files, skipped, total_bytes = walk_and_catalog(
         root_path,
         db,
-        no_hash=args.no_hash,
         resume=resume,
     )
+
+    hash_count = 0
+    hash_skipped = 0
+    if not args.no_hash:
+        print("Pass 2: hashing (inode-sorted)")
+        hash_count, hash_skipped = hash_catalog_files(root_path, db)
+
     elapsed = time.monotonic() - t0
 
     db.mark_complete()
@@ -87,5 +95,7 @@ def main():
     print(f"  Folders: {folders:,}")
     print(f"  Size:    {format_size(total_bytes)}")
     if skipped:
-        print(f"  Skipped: {skipped:,}")
+        print(f"  Skipped: {skipped:,} (walk)")
+    if hash_skipped:
+        print(f"  Skipped: {hash_skipped:,} (hash)")
     print(f"  Catalog: {output} ({format_size(db_size)})")

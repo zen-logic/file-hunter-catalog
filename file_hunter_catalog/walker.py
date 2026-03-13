@@ -1,4 +1,4 @@
-"""Recursive directory walker with hashing and batched DB writes."""
+"""Recursive directory walker with batched DB writes, plus inode-sorted hash pass."""
 
 import os
 import stat
@@ -8,7 +8,6 @@ from datetime import datetime, timezone
 
 from file_hunter_catalog.catalog_db import CatalogDB
 from file_hunter_catalog.classify import classify_file, format_elapsed, format_size
-from file_hunter_catalog.hasher import hash_file_partial_sync
 
 BATCH_SIZE = 5000
 TRAVERSAL_SAVE_INTERVAL = 30  # seconds
@@ -18,10 +17,11 @@ def walk_and_catalog(
     root_path: str,
     db: CatalogDB,
     *,
-    no_hash: bool = False,
     resume: bool = False,
 ):
-    """Walk the file tree and write everything to the catalog DB.
+    """Walk the file tree and write metadata to the catalog DB.
+
+    Hashing is deferred to hash_catalog_files() for inode-sorted I/O.
 
     Returns (files_cataloged, files_skipped, total_bytes).
     """
@@ -112,15 +112,6 @@ def walk_and_catalog(
             rel_path = os.path.join(rel_dir, name) if rel_dir else name
             type_high, type_low = classify_file(name)
 
-            # Hash — partial only (full hashes computed later via backfill)
-            hash_partial = None
-            if not no_hash and st.st_size > 0:
-                try:
-                    hash_partial = hash_file_partial_sync(full_path)
-                except OSError:
-                    files_skipped += 1
-                    continue
-
             created = datetime.fromtimestamp(
                 st.st_birthtime if hasattr(st, "st_birthtime") else st.st_ctime,
                 tz=timezone.utc,
@@ -138,10 +129,11 @@ def walk_and_catalog(
                     st.st_size,
                     type_high,
                     type_low,
-                    hash_partial,
+                    None,  # hash_partial — deferred to hash pass
                     created,
                     modified,
                     hidden,
+                    st.st_ino,
                 )
             )
             files_cataloged += 1
@@ -180,3 +172,58 @@ def walk_and_catalog(
     print()
 
     return files_cataloged, files_skipped, total_bytes
+
+
+def hash_catalog_files(root_path: str, db: CatalogDB) -> tuple[int, int]:
+    """Hash unhashed files in inode order. Returns (hashed, skipped)."""
+    from file_hunter_catalog.hasher import hash_file_partial_sync
+
+    root_path = os.path.abspath(root_path)
+    to_hash = db.get_unhashed_files()
+    total = len(to_hash)
+
+    if not total:
+        return 0, 0
+
+    hashed = 0
+    skipped = 0
+    batch: list[tuple] = []
+    t0 = time.monotonic()
+    last_report = t0
+
+    for file_id, rel_path in to_hash:
+        full_path = os.path.join(root_path, rel_path)
+        try:
+            h = hash_file_partial_sync(full_path)
+        except OSError:
+            skipped += 1
+            continue
+
+        batch.append((h, file_id))
+        hashed += 1
+
+        if len(batch) >= BATCH_SIZE:
+            db.update_hashes_batch(batch)
+            batch.clear()
+
+        now = time.monotonic()
+        if now - last_report >= 2:
+            elapsed = now - t0
+            rate = hashed / elapsed if elapsed > 0 else 0
+            pct = (hashed + skipped) * 100 // total
+            print(
+                f"\r  {hashed:,}/{total:,} hashed ({pct}%) | "
+                f"{rate:.0f} files/sec | "
+                f"{format_elapsed(elapsed)}\033[K",
+                end="",
+                flush=True,
+            )
+            last_report = now
+
+    if batch:
+        db.update_hashes_batch(batch)
+
+    # Clear progress line
+    print()
+
+    return hashed, skipped
